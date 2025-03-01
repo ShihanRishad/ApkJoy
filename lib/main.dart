@@ -3,22 +3,22 @@ import 'package:provider/provider.dart';
 import 'package:device_apps/device_apps.dart';
 import 'package:flutter/services.dart';
 import 'color_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Import shared_preferences
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Ensure Flutter is initialized
+  WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   runApp(
     ChangeNotifierProvider(
-      create: (_) => ColorProvider(),
-      child: ApkJoyApp(prefs: prefs), // Pass SharedPreferences instance
+      create: (_) => ColorProvider(prefs: prefs), // Pass SharedPreferences instance to ColorProvider
+      child: ApkJoyApp(prefs: prefs),
     ),
   );
 }
 
 /// Root widget that holds global theme settings and system apps toggle.
 class ApkJoyApp extends StatefulWidget {
-  final SharedPreferences prefs; // Add SharedPreferences as a property
+  final SharedPreferences prefs;
   const ApkJoyApp({super.key, required this.prefs});
 
   @override
@@ -28,7 +28,6 @@ class ApkJoyApp extends StatefulWidget {
 class _ApkJoyAppState extends State<ApkJoyApp> {
   ThemeMode _themeMode = ThemeMode.light;
   bool _showSystemApps = false;
-  late Color _primaryColor;
 
   @override
   void initState() {
@@ -43,10 +42,6 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
           ? ThemeMode.dark
           : ThemeMode.light;
       _showSystemApps = widget.prefs.getBool('showSystemApps') ?? false;
-      final colorValue = widget.prefs.getInt('primaryColor');
-      _primaryColor = colorValue != null ? Color(colorValue) : Colors.blue;
-      // Set the color on the provider
-      Provider.of<ColorProvider>(context, listen: false).updatePrimaryColor(_primaryColor);
     });
   }
 
@@ -54,7 +49,6 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
   Future<void> _saveSettings() async {
     await widget.prefs.setString('themeMode', _themeMode == ThemeMode.dark ? 'dark' : 'light');
     await widget.prefs.setBool('showSystemApps', _showSystemApps);
-    await widget.prefs.setInt('primaryColor', _primaryColor.value);
   }
 
   /// Toggle between dark and light themes.
@@ -73,19 +67,9 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
     _saveSettings();
   }
 
-  void _updatePrimaryColor(Color newColor) {
-    setState(() {
-      _primaryColor = newColor;
-    });
-    _saveSettings();
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorProvider = Provider.of<ColorProvider>(context);
-    if (_primaryColor != colorProvider.primaryColor) {
-        _primaryColor = colorProvider.primaryColor;
-    }
 
     return MaterialApp(
       title: 'ApkJoy',
@@ -95,7 +79,7 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
         useMaterial3: true,
         brightness: Brightness.light,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: _primaryColor,
+          seedColor: colorProvider.primaryColor,
           brightness: Brightness.light,
         ),
       ),
@@ -103,7 +87,7 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
         useMaterial3: true,
         brightness: Brightness.dark,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: _primaryColor,
+          seedColor: colorProvider.primaryColor,
           brightness: Brightness.dark,
         ),
       ),

@@ -1,40 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
-/// Provider for managing and changing the primary theme color.
+
 class ColorProvider with ChangeNotifier {
-  Color _primaryColor = Color.fromARGB(255, 21, 223, 125); // Initial color
+  Color _primaryColor = Colors.blue;
+  final SharedPreferences prefs;
+
+  ColorProvider({required this.prefs}){
+    _loadColor();
+  }
 
   Color get primaryColor => _primaryColor;
 
-  /// Change the primary color and notify listeners.
-  void changeColor(Color color) {
-    _primaryColor = color;
+  void updatePrimaryColor(Color newColor) {
+    _primaryColor = newColor;
+    _saveColor();
     notifyListeners();
   }
 
-  /// Display a color picker dialog to allow the user to choose a new primary color.
   void showColorPicker(BuildContext context) {
+    Color currentColor = _primaryColor;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Set app theme color:'),
-        content: SingleChildScrollView(
-          child: ColorPicker(
-            pickerColor: _primaryColor,
-            onColorChanged: changeColor,
-            pickerAreaHeightPercent: 0.8,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Pick a color!'),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              pickerColor: currentColor,
+              onColorChanged: (color){
+                currentColor = color;
+              },
+            ),
           ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: const Text('Done'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      ),
+          actions: <Widget>[
+            ElevatedButton(
+              child: const Text('Got it'),
+              onPressed: () {
+                updatePrimaryColor(currentColor);
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
     );
+  }
+  void _loadColor(){
+    final colorValue = prefs.getInt('primaryColor');
+    _primaryColor = colorValue != null ? Color(colorValue) : Colors.blue;
+    notifyListeners();
+  }
+
+  void _saveColor() async {
+    await prefs.setInt('primaryColor', _primaryColor.value);
   }
 }
