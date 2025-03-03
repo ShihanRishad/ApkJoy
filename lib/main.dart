@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'color_provider.dart';
 
-/// A simple utility to manage SharedPreferences as a singleton.
+/// A simple utility to manage SharedPreferences.
 class PreferenceUtils {
   static late SharedPreferences _prefs;
 
@@ -14,9 +14,7 @@ class PreferenceUtils {
   }
 
   static String getThemeMode() => _prefs.getString('themeMode') ?? 'light';
-
   static bool getShowSystemApps() => _prefs.getBool('showSystemApps') ?? false;
-
   static int getPrimaryColorValue() => _prefs.getInt('primaryColor') ?? Colors.blue.value;
 
   static Future<void> setThemeMode(String mode) async {
@@ -29,6 +27,13 @@ class PreferenceUtils {
 
   static Future<void> setPrimaryColorValue(int colorValue) async {
     await _prefs.setInt('primaryColor', colorValue);
+  }
+
+  /// Reset all settings to defaults.
+  static Future<void> resetSettings() async {
+    await setThemeMode('light');
+    await setShowSystemApps(false);
+    await setPrimaryColorValue(Colors.blue.value);
   }
 }
 
@@ -58,8 +63,6 @@ class ApkJoyApp extends StatefulWidget {
 class _ApkJoyAppState extends State<ApkJoyApp> {
   ThemeMode _themeMode = ThemeMode.light;
   bool _showSystemApps = false;
-  // Initialize with a default value to avoid late initialization errors.
-  Color _primaryColor = Colors.blue;
 
   @override
   void initState() {
@@ -67,30 +70,31 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
     _loadSettings();
   }
 
-  /// Loads settings from SharedPreferences.
+  /// Loads settings from SharedPreferences after the first frame.
   void _loadSettings() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final themeString = widget.prefs.getString('themeMode');
       final showSystemApps = widget.prefs.getBool('showSystemApps') ?? false;
       final colorValue = widget.prefs.getInt('primaryColor') ?? Colors.blue.value;
 
+      if (!mounted) return;
       setState(() {
         _themeMode = themeString == 'dark' ? ThemeMode.dark : ThemeMode.light;
         _showSystemApps = showSystemApps;
-        _primaryColor = Color(colorValue);
       });
-
-      Provider.of<ColorProvider>(context, listen: false).updatePrimaryColor(_primaryColor);
+      // Update ColorProvider with the loaded primary color.
+      Provider.of<ColorProvider>(context, listen: false)
+          .updatePrimaryColor(Color(colorValue));
     });
   }
-
-
 
   /// Saves current settings to SharedPreferences.
   Future<void> _saveSettings() async {
     await PreferenceUtils.setThemeMode(_themeMode == ThemeMode.dark ? 'dark' : 'light');
     await PreferenceUtils.setShowSystemApps(_showSystemApps);
-    await PreferenceUtils.setPrimaryColorValue(_primaryColor.value);
+    // Save the current primary color from the provider.
+    final currentColor = Provider.of<ColorProvider>(context, listen: false).primaryColor;
+    await PreferenceUtils.setPrimaryColorValue(currentColor.value);
   }
 
   /// Toggles dark/light theme.
@@ -109,17 +113,27 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
     _saveSettings();
   }
 
-  /// Updates the primary color and saves the change.
+  /// Updates the primary color via the ColorProvider and saves it.
   void _updatePrimaryColor(Color newColor) {
-    setState(() {
-      _primaryColor = newColor;
-    });
     Provider.of<ColorProvider>(context, listen: false).updatePrimaryColor(newColor);
+    _saveSettings();
+  }
+
+  /// Resets settings to default values.
+  Future<void> _resetSettings() async {
+    await PreferenceUtils.resetSettings();
+    setState(() {
+      _themeMode = ThemeMode.light;
+      _showSystemApps = false;
+    });
+    Provider.of<ColorProvider>(context, listen: false).updatePrimaryColor(Colors.blue);
     _saveSettings();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Listen to ColorProvider for changes.
+    final primaryColor = Provider.of<ColorProvider>(context).primaryColor;
     return MaterialApp(
       title: 'ApkJoy',
       debugShowCheckedModeBanner: false,
@@ -129,7 +143,7 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
         useMaterial3: true,
         brightness: Brightness.light,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: _primaryColor,
+          seedColor: primaryColor,
           brightness: Brightness.light,
         ),
       ),
@@ -138,7 +152,7 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
         useMaterial3: true,
         brightness: Brightness.dark,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: _primaryColor,
+          seedColor: primaryColor,
           brightness: Brightness.dark,
         ),
       ),
@@ -148,6 +162,7 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
         currentThemeMode: _themeMode,
         showSystemApps: _showSystemApps,
         onToggleSystemApps: _toggleSystemApps,
+        onResetSettings: _resetSettings,
       ),
     );
   }
@@ -159,6 +174,7 @@ class AppListPage extends StatefulWidget {
   final ThemeMode currentThemeMode;
   final bool showSystemApps;
   final Function(bool) onToggleSystemApps;
+  final Future<void> Function() onResetSettings;
 
   const AppListPage({
     Key? key,
@@ -166,6 +182,7 @@ class AppListPage extends StatefulWidget {
     required this.currentThemeMode,
     required this.showSystemApps,
     required this.onToggleSystemApps,
+    required this.onResetSettings,
   }) : super(key: key);
 
   @override
@@ -188,7 +205,6 @@ class _AppListPageState extends State<AppListPage> {
     });
   }
 
-  /// Loads apps based on whether system apps should be included.
   void _loadApps() {
     _appsFuture = DeviceApps.getInstalledApplications(
       includeAppIcons: true,
@@ -211,7 +227,6 @@ class _AppListPageState extends State<AppListPage> {
         title: const Text('ApkJoy'),
         centerTitle: true,
         actions: [
-          // Navigate to the Settings page.
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
@@ -223,6 +238,7 @@ class _AppListPageState extends State<AppListPage> {
                     onToggleTheme: widget.onToggleTheme,
                     showSystemApps: widget.showSystemApps,
                     onToggleSystemApps: widget.onToggleSystemApps,
+                    onResetSettings: widget.onResetSettings,
                   ),
                 ),
               );
@@ -246,7 +262,6 @@ class _AppListPageState extends State<AppListPage> {
           ),
         ),
       ),
-      // Display the list of filtered apps.
       body: FutureBuilder<List<Application>>(
         future: _appsFuture,
         builder: (context, snapshot) {
@@ -300,7 +315,6 @@ class _AppDetailPageState extends State<AppDetailPage> {
   static const platform = MethodChannel('apk_extractor');
   String _status = '';
 
-  /// Invokes the native method to extract the APK.
   Future<void> extractApk() async {
     try {
       final String apkPath = await platform.invokeMethod('extractApk', {
@@ -336,7 +350,9 @@ class _AppDetailPageState extends State<AppDetailPage> {
                   if (widget.app is ApplicationWithIcon)
                     CircleAvatar(
                       radius: 50,
-                      backgroundImage: MemoryImage((widget.app as ApplicationWithIcon).icon),
+                      backgroundImage: MemoryImage(
+                        (widget.app as ApplicationWithIcon).icon,
+                      ),
                       backgroundColor: Colors.transparent,
                     ),
                   const SizedBox(height: 20),
@@ -391,12 +407,13 @@ class _AppDetailPageState extends State<AppDetailPage> {
   }
 }
 
-/// Settings page for theme switching, system apps toggle, and primary color selection.
+/// Settings page for theme switching, system apps toggle, primary color selection, and resetting settings.
 class SettingsPage extends StatelessWidget {
   final bool isDark;
   final Function(bool) onToggleTheme;
   final bool showSystemApps;
   final Function(bool) onToggleSystemApps;
+  final Future<void> Function() onResetSettings;
 
   const SettingsPage({
     Key? key,
@@ -404,7 +421,36 @@ class SettingsPage extends StatelessWidget {
     required this.onToggleTheme,
     required this.showSystemApps,
     required this.onToggleSystemApps,
+    required this.onResetSettings,
   }) : super(key: key);
+
+  Future<void> _confirmReset(BuildContext context) async {
+    final bool? shouldReset = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Settings'),
+        content: const Text('Are you sure you want to reset all settings to default?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (shouldReset == true) {
+      await onResetSettings();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Settings reset to default.')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -417,7 +463,8 @@ class SettingsPage extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Card(
           elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -452,7 +499,7 @@ class SettingsPage extends StatelessWidget {
                   ],
                 ),
                 const Divider(),
-                // Button to launch the color picker dialog.
+                // Change app theme color.
                 ListTile(
                   title: const Text("Change App Theme Color"),
                   trailing: CircleAvatar(
@@ -461,6 +508,13 @@ class SettingsPage extends StatelessWidget {
                   onTap: () {
                     colorProvider.showColorPicker(context);
                   },
+                ),
+                const Divider(),
+                // Reset settings button.
+                TextButton.icon(
+                  icon: const Icon(Icons.restore),
+                  label: const Text("Reset Settings"),
+                  onPressed: () => _confirmReset(context),
                 ),
               ],
             ),
