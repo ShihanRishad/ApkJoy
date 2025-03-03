@@ -2,24 +2,54 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:device_apps/device_apps.dart';
 import 'package:flutter/services.dart';
-import 'color_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'color_provider.dart';
+
+/// A simple utility to manage SharedPreferences as a singleton.
+class PreferenceUtils {
+  static late SharedPreferences _prefs;
+
+  static Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
+  }
+
+  static String getThemeMode() => _prefs.getString('themeMode') ?? 'light';
+
+  static bool getShowSystemApps() => _prefs.getBool('showSystemApps') ?? false;
+
+  static int getPrimaryColorValue() => _prefs.getInt('primaryColor') ?? Colors.blue.value;
+
+  static Future<void> setThemeMode(String mode) async {
+    await _prefs.setString('themeMode', mode);
+  }
+
+  static Future<void> setShowSystemApps(bool value) async {
+    await _prefs.setBool('showSystemApps', value);
+  }
+
+  static Future<void> setPrimaryColorValue(int colorValue) async {
+    await _prefs.setInt('primaryColor', colorValue);
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
+  await PreferenceUtils.init();
+  final SharedPreferences prefs = PreferenceUtils._prefs;
   runApp(
+    // Initialize ColorProvider with the saved primary color.
     ChangeNotifierProvider(
-      create: (_) => ColorProvider(prefs: prefs), // Pass SharedPreferences instance to ColorProvider
+      create: (_) =>
+          ColorProvider(initialColor: Color(PreferenceUtils.getPrimaryColorValue())),
       child: ApkJoyApp(prefs: prefs),
     ),
   );
 }
 
-/// Root widget that holds global theme settings and system apps toggle.
+/// Root widget that holds global theme settings and the system apps toggle.
 class ApkJoyApp extends StatefulWidget {
   final SharedPreferences prefs;
-  const ApkJoyApp({super.key, required this.prefs});
+  const ApkJoyApp({Key? key, required this.prefs}) : super(key: key);
 
   @override
   _ApkJoyAppState createState() => _ApkJoyAppState();
@@ -28,6 +58,8 @@ class ApkJoyApp extends StatefulWidget {
 class _ApkJoyAppState extends State<ApkJoyApp> {
   ThemeMode _themeMode = ThemeMode.light;
   bool _showSystemApps = false;
+  // Initialize with a default value to avoid late initialization errors.
+  Color _primaryColor = Colors.blue;
 
   @override
   void initState() {
@@ -35,23 +67,33 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
     _loadSettings();
   }
 
-  /// Load the settings from SharedPreferences
+  /// Loads settings from SharedPreferences.
   void _loadSettings() {
-    setState(() {
-      _themeMode = widget.prefs.getString('themeMode') == 'dark'
-          ? ThemeMode.dark
-          : ThemeMode.light;
-      _showSystemApps = widget.prefs.getBool('showSystemApps') ?? false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final themeString = widget.prefs.getString('themeMode');
+      final showSystemApps = widget.prefs.getBool('showSystemApps') ?? false;
+      final colorValue = widget.prefs.getInt('primaryColor') ?? Colors.blue.value;
+
+      setState(() {
+        _themeMode = themeString == 'dark' ? ThemeMode.dark : ThemeMode.light;
+        _showSystemApps = showSystemApps;
+        _primaryColor = Color(colorValue);
+      });
+
+      Provider.of<ColorProvider>(context, listen: false).updatePrimaryColor(_primaryColor);
     });
   }
 
-  /// Save settings to SharedPreferences.
+
+
+  /// Saves current settings to SharedPreferences.
   Future<void> _saveSettings() async {
-    await widget.prefs.setString('themeMode', _themeMode == ThemeMode.dark ? 'dark' : 'light');
-    await widget.prefs.setBool('showSystemApps', _showSystemApps);
+    await PreferenceUtils.setThemeMode(_themeMode == ThemeMode.dark ? 'dark' : 'light');
+    await PreferenceUtils.setShowSystemApps(_showSystemApps);
+    await PreferenceUtils.setPrimaryColorValue(_primaryColor.value);
   }
 
-  /// Toggle between dark and light themes.
+  /// Toggles dark/light theme.
   void _toggleTheme(bool isDark) {
     setState(() {
       _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
@@ -59,7 +101,7 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
     _saveSettings();
   }
 
-  /// Toggle showing system apps.
+  /// Toggles whether system apps should be shown.
   void _toggleSystemApps(bool value) {
     setState(() {
       _showSystemApps = value;
@@ -67,30 +109,40 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
     _saveSettings();
   }
 
+  /// Updates the primary color and saves the change.
+  void _updatePrimaryColor(Color newColor) {
+    setState(() {
+      _primaryColor = newColor;
+    });
+    Provider.of<ColorProvider>(context, listen: false).updatePrimaryColor(newColor);
+    _saveSettings();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colorProvider = Provider.of<ColorProvider>(context);
-
     return MaterialApp(
       title: 'ApkJoy',
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
+      // Light theme configuration using Material3.
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: colorProvider.primaryColor,
+          seedColor: _primaryColor,
           brightness: Brightness.light,
         ),
       ),
+      // Dark theme configuration.
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: colorProvider.primaryColor,
+          seedColor: _primaryColor,
           brightness: Brightness.dark,
         ),
       ),
+      // Pass settings down to the AppListPage.
       home: AppListPage(
         onToggleTheme: _toggleTheme,
         currentThemeMode: _themeMode,
@@ -101,6 +153,7 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
   }
 }
 
+/// Page that displays the list of installed apps with search functionality.
 class AppListPage extends StatefulWidget {
   final Function(bool) onToggleTheme;
   final ThemeMode currentThemeMode;
@@ -108,12 +161,12 @@ class AppListPage extends StatefulWidget {
   final Function(bool) onToggleSystemApps;
 
   const AppListPage({
-    super.key,
+    Key? key,
     required this.onToggleTheme,
     required this.currentThemeMode,
     required this.showSystemApps,
     required this.onToggleSystemApps,
-  });
+  }) : super(key: key);
 
   @override
   _AppListPageState createState() => _AppListPageState();
@@ -135,6 +188,7 @@ class _AppListPageState extends State<AppListPage> {
     });
   }
 
+  /// Loads apps based on whether system apps should be included.
   void _loadApps() {
     _appsFuture = DeviceApps.getInstalledApplications(
       includeAppIcons: true,
@@ -157,6 +211,7 @@ class _AppListPageState extends State<AppListPage> {
         title: const Text('ApkJoy'),
         centerTitle: true,
         actions: [
+          // Navigate to the Settings page.
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
@@ -191,6 +246,7 @@ class _AppListPageState extends State<AppListPage> {
           ),
         ),
       ),
+      // Display the list of filtered apps.
       body: FutureBuilder<List<Application>>(
         future: _appsFuture,
         builder: (context, snapshot) {
@@ -231,9 +287,10 @@ class _AppListPageState extends State<AppListPage> {
   }
 }
 
+/// Page to display details of a selected app and extract its APK.
 class AppDetailPage extends StatefulWidget {
   final Application app;
-  const AppDetailPage({super.key, required this.app});
+  const AppDetailPage({Key? key, required this.app}) : super(key: key);
 
   @override
   _AppDetailPageState createState() => _AppDetailPageState();
@@ -243,6 +300,7 @@ class _AppDetailPageState extends State<AppDetailPage> {
   static const platform = MethodChannel('apk_extractor');
   String _status = '';
 
+  /// Invokes the native method to extract the APK.
   Future<void> extractApk() async {
     try {
       final String apkPath = await platform.invokeMethod('extractApk', {
@@ -269,8 +327,7 @@ class _AppDetailPageState extends State<AppDetailPage> {
           padding: const EdgeInsets.all(16.0),
           child: Card(
             elevation: 4,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -279,9 +336,7 @@ class _AppDetailPageState extends State<AppDetailPage> {
                   if (widget.app is ApplicationWithIcon)
                     CircleAvatar(
                       radius: 50,
-                      backgroundImage: MemoryImage(
-                        (widget.app as ApplicationWithIcon).icon,
-                      ),
+                      backgroundImage: MemoryImage((widget.app as ApplicationWithIcon).icon),
                       backgroundColor: Colors.transparent,
                     ),
                   const SizedBox(height: 20),
@@ -302,8 +357,7 @@ class _AppDetailPageState extends State<AppDetailPage> {
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 24),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
                       textStyle: const TextStyle(fontSize: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -318,10 +372,7 @@ class _AppDetailPageState extends State<AppDetailPage> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.1),
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -340,6 +391,7 @@ class _AppDetailPageState extends State<AppDetailPage> {
   }
 }
 
+/// Settings page for theme switching, system apps toggle, and primary color selection.
 class SettingsPage extends StatelessWidget {
   final bool isDark;
   final Function(bool) onToggleTheme;
@@ -347,12 +399,12 @@ class SettingsPage extends StatelessWidget {
   final Function(bool) onToggleSystemApps;
 
   const SettingsPage({
-    super.key,
+    Key? key,
     required this.isDark,
     required this.onToggleTheme,
     required this.showSystemApps,
     required this.onToggleSystemApps,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -365,12 +417,12 @@ class SettingsPage extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Card(
           elevation: 4,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
+                // Dark theme toggle.
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -380,13 +432,12 @@ class SettingsPage extends StatelessWidget {
                     ),
                     Switch(
                       value: isDark,
-                      onChanged: (value) {
-                        onToggleTheme(value);
-                      },
+                      onChanged: onToggleTheme,
                     ),
                   ],
                 ),
                 const Divider(),
+                // Toggle for showing system apps.
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -396,13 +447,12 @@ class SettingsPage extends StatelessWidget {
                     ),
                     Switch(
                       value: showSystemApps,
-                      onChanged: (value) {
-                        onToggleSystemApps(value);
-                      },
+                      onChanged: onToggleSystemApps,
                     ),
                   ],
                 ),
                 const Divider(),
+                // Button to launch the color picker dialog.
                 ListTile(
                   title: const Text("Change App Theme Color"),
                   trailing: CircleAvatar(
