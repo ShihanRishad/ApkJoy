@@ -10,8 +10,10 @@ class ColorProvider with ChangeNotifier {
 
   /// Updates the primary color and notifies listeners.
   void updatePrimaryColor(Color color) {
-    _primaryColor = color;
-    notifyListeners();
+    if (color != _primaryColor) {
+      _primaryColor = color;
+      notifyListeners();
+    }
   }
 
   /// Displays a dialog with a color picker.

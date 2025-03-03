@@ -44,8 +44,7 @@ void main() async {
   runApp(
     // Initialize ColorProvider with the saved primary color.
     ChangeNotifierProvider(
-      create: (_) =>
-          ColorProvider(initialColor: Color(PreferenceUtils.getPrimaryColorValue())),
+      create: (_) => ColorProvider(initialColor: Color(PreferenceUtils.getPrimaryColorValue())),
       child: ApkJoyApp(prefs: prefs),
     ),
   );
@@ -68,6 +67,11 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
   void initState() {
     super.initState();
     _loadSettings();
+    // Listen to changes in ColorProvider to immediately save any color updates.
+    Provider.of<ColorProvider>(context, listen: false).addListener(() {
+      final currentColor = Provider.of<ColorProvider>(context, listen: false).primaryColor;
+      PreferenceUtils.setPrimaryColorValue(currentColor.value);
+    });
   }
 
   /// Loads settings from SharedPreferences after the first frame.
@@ -88,13 +92,10 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
     });
   }
 
-  /// Saves current settings to SharedPreferences.
+  /// Saves current settings (except primary color which is saved via the listener) to SharedPreferences.
   Future<void> _saveSettings() async {
     await PreferenceUtils.setThemeMode(_themeMode == ThemeMode.dark ? 'dark' : 'light');
     await PreferenceUtils.setShowSystemApps(_showSystemApps);
-    // Save the current primary color from the provider.
-    final currentColor = Provider.of<ColorProvider>(context, listen: false).primaryColor;
-    await PreferenceUtils.setPrimaryColorValue(currentColor.value);
   }
 
   /// Toggles dark/light theme.
@@ -110,12 +111,6 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
     setState(() {
       _showSystemApps = value;
     });
-    _saveSettings();
-  }
-
-  /// Updates the primary color via the ColorProvider and saves it.
-  void _updatePrimaryColor(Color newColor) {
-    Provider.of<ColorProvider>(context, listen: false).updatePrimaryColor(newColor);
     _saveSettings();
   }
 
@@ -255,7 +250,7 @@ class _AppListPageState extends State<AppListPage> {
                 hintText: 'Search apps...',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(50),
                 ),
               ),
             ),
@@ -376,7 +371,7 @@ class _AppDetailPageState extends State<AppDetailPage> {
                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
                       textStyle: const TextStyle(fontSize: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(50),
                       ),
                     ),
                     icon: const Icon(Icons.download),
@@ -469,52 +464,43 @@ class SettingsPage extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                // Dark theme toggle.
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Dark Theme",
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Switch(
-                      value: isDark,
-                      onChanged: onToggleTheme,
-                    ),
-                  ],
-                ),
-                const Divider(),
-                // Toggle for showing system apps.
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Show System Apps",
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Switch(
-                      value: showSystemApps,
-                      onChanged: onToggleSystemApps,
-                    ),
-                  ],
-                ),
-                const Divider(),
-                // Change app theme color.
+                // Dark Theme Toggle (full area clickable)
                 ListTile(
+                  leading: const Icon(Icons.brightness_6),
+                  title: const Text("Dark Theme"),
+                  trailing: Switch(
+                    value: isDark,
+                    onChanged: onToggleTheme,
+                  ),
+                  onTap: () => onToggleTheme(!isDark),
+                ),
+                const Divider(),
+                // Show System Apps Toggle (full area clickable)
+                ListTile(
+                  leading: const Icon(Icons.apps),
+                  title: const Text("Show System Apps"),
+                  trailing: Switch(
+                    value: showSystemApps,
+                    onChanged: onToggleSystemApps,
+                  ),
+                  onTap: () => onToggleSystemApps(!showSystemApps),
+                ),
+                const Divider(),
+                // Change App Theme Color
+                ListTile(
+                  leading: const Icon(Icons.palette),
                   title: const Text("Change App Theme Color"),
                   trailing: CircleAvatar(
                     backgroundColor: colorProvider.primaryColor,
                   ),
-                  onTap: () {
-                    colorProvider.showColorPicker(context);
-                  },
+                  onTap: () => colorProvider.showColorPicker(context),
                 ),
                 const Divider(),
-                // Reset settings button.
-                TextButton.icon(
-                  icon: const Icon(Icons.restore),
-                  label: const Text("Reset Settings"),
-                  onPressed: () => _confirmReset(context),
+                // Reset Settings Button
+                ListTile(
+                  leading: const Icon(Icons.restore),
+                  title: const Text("Reset Settings"),
+                  onTap: () => _confirmReset(context),
                 ),
               ],
             ),
@@ -524,3 +510,5 @@ class SettingsPage extends StatelessWidget {
     );
   }
 }
+
+
