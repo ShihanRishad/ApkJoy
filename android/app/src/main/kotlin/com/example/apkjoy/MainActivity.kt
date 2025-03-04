@@ -1,4 +1,4 @@
-package com.example.apkjoy
+package com.shihanrishad.apkjoy
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -8,7 +8,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "apk_extractor"
+    private val CHANNEL = "apkjoy"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

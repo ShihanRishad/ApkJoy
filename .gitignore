@@ -47,3 +47,5 @@ app.*.map.json
 .idx
 /apkjoy
 /old
+android-ndk-r27c-linux.zip
+android-ndk-r27c

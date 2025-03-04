@@ -50,7 +50,7 @@ packages:
     source: hosted
     version: "1.0.8"
   device_apps:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       path: "apkjoy/packages/device_apps/device_apps"
       relative: true
