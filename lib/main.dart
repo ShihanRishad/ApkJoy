@@ -53,7 +53,7 @@ void main() async {
 /// Root widget that holds global theme settings and the system apps toggle.
 class ApkJoyApp extends StatefulWidget {
   final SharedPreferences prefs;
-  const ApkJoyApp({Key? key, required this.prefs}) : super(key: key);
+  const ApkJoyApp({super.key, required this.prefs});
 
   @override
   _ApkJoyAppState createState() => _ApkJoyAppState();
@@ -172,13 +172,13 @@ class AppListPage extends StatefulWidget {
   final Future<void> Function() onResetSettings;
 
   const AppListPage({
-    Key? key,
+    super.key,
     required this.onToggleTheme,
     required this.currentThemeMode,
     required this.showSystemApps,
     required this.onToggleSystemApps,
     required this.onResetSettings,
-  }) : super(key: key);
+  });
 
   @override
   _AppListPageState createState() => _AppListPageState();
@@ -300,14 +300,14 @@ class _AppListPageState extends State<AppListPage> {
 /// Page to display details of a selected app and extract its APK.
 class AppDetailPage extends StatefulWidget {
   final Application app;
-  const AppDetailPage({Key? key, required this.app}) : super(key: key);
+  const AppDetailPage({super.key, required this.app});
 
   @override
   _AppDetailPageState createState() => _AppDetailPageState();
 }
 
 class _AppDetailPageState extends State<AppDetailPage> {
-  static const platform = MethodChannel('apk_extractor');
+  static const platform = MethodChannel('apkjoy');
   String _status = '';
 
   Future<void> extractApk() async {
@@ -411,13 +411,13 @@ class SettingsPage extends StatelessWidget {
   final Future<void> Function() onResetSettings;
 
   const SettingsPage({
-    Key? key,
+    super.key,
     required this.isDark,
     required this.onToggleTheme,
     required this.showSystemApps,
     required this.onToggleSystemApps,
     required this.onResetSettings,
-  }) : super(key: key);
+  });
 
   Future<void> _confirmReset(BuildContext context) async {
     final bool? shouldReset = await showDialog<bool>(
