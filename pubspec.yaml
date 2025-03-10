@@ -35,6 +35,8 @@ dependencies:
   flutter_colorpicker: 1.1.0
   provider: 6.1.2
   shared_preferences: 2.5.2
+  file_picker: 9.0.2
+  share_plus: 10.1.4
   # device_installed_apps: ^1.0.1
 
 

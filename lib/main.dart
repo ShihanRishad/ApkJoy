@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:device_apps/device_apps.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:share_plus/share_plus.dart';
 import 'color_provider.dart';
 
 /// A simple utility to manage SharedPreferences.
@@ -10,7 +12,11 @@ class PreferenceUtils {
   static late SharedPreferences _prefs;
 
   static Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
+    try {
+      _prefs = await SharedPreferences.getInstance();
+    } catch (e) {
+      debugPrint('Error initializing SharedPreferences: $e');
+    }
   }
 
   static String getThemeMode() => _prefs.getString('themeMode') ?? 'light';
@@ -18,15 +24,27 @@ class PreferenceUtils {
   static int getPrimaryColorValue() => _prefs.getInt('primaryColor') ?? Colors.blue.value;
 
   static Future<void> setThemeMode(String mode) async {
-    await _prefs.setString('themeMode', mode);
+    try {
+      await _prefs.setString('themeMode', mode);
+    } catch (e) {
+      debugPrint('Error setting theme mode: $e');
+    }
   }
 
   static Future<void> setShowSystemApps(bool value) async {
-    await _prefs.setBool('showSystemApps', value);
+    try {
+      await _prefs.setBool('showSystemApps', value);
+    } catch (e) {
+      debugPrint('Error setting show system apps: $e');
+    }
   }
 
   static Future<void> setPrimaryColorValue(int colorValue) async {
-    await _prefs.setInt('primaryColor', colorValue);
+    try {
+      await _prefs.setInt('primaryColor', colorValue);
+    } catch (e) {
+      debugPrint('Error setting primary color: $e');
+    }
   }
 
   /// Reset all settings to defaults.
@@ -39,6 +57,20 @@ class PreferenceUtils {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Override the default error widget builder to show errors in the UI
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Scaffold(
+      body: Center(
+        child: Text(
+          'Something went wrong:\n${details.exception}',
+          style: const TextStyle(color: Colors.red),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  };
+
   await PreferenceUtils.init();
   final SharedPreferences prefs = PreferenceUtils._prefs;
   runApp(
@@ -77,25 +109,32 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
   /// Loads settings from SharedPreferences after the first frame.
   void _loadSettings() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final themeString = widget.prefs.getString('themeMode');
-      final showSystemApps = widget.prefs.getBool('showSystemApps') ?? false;
-      final colorValue = widget.prefs.getInt('primaryColor') ?? Colors.blue.value;
+      try {
+        final themeString = widget.prefs.getString('themeMode');
+        final showSystemApps = widget.prefs.getBool('showSystemApps') ?? false;
+        final colorValue = widget.prefs.getInt('primaryColor') ?? Colors.blue.value;
 
-      if (!mounted) return;
-      setState(() {
-        _themeMode = themeString == 'dark' ? ThemeMode.dark : ThemeMode.light;
-        _showSystemApps = showSystemApps;
-      });
-      // Update ColorProvider with the loaded primary color.
-      Provider.of<ColorProvider>(context, listen: false)
-          .updatePrimaryColor(Color(colorValue));
+        if (!mounted) return;
+        setState(() {
+          _themeMode = themeString == 'dark' ? ThemeMode.dark : ThemeMode.light;
+          _showSystemApps = showSystemApps;
+        });
+        // Update ColorProvider with the loaded primary color.
+        Provider.of<ColorProvider>(context, listen: false).updatePrimaryColor(Color(colorValue));
+      } catch (e) {
+        debugPrint('Error loading settings: $e');
+      }
     });
   }
 
-  /// Saves current settings (except primary color which is saved via the listener) to SharedPreferences.
+  /// Saves current settings to SharedPreferences.
   Future<void> _saveSettings() async {
-    await PreferenceUtils.setThemeMode(_themeMode == ThemeMode.dark ? 'dark' : 'light');
-    await PreferenceUtils.setShowSystemApps(_showSystemApps);
+    try {
+      await PreferenceUtils.setThemeMode(_themeMode == ThemeMode.dark ? 'dark' : 'light');
+      await PreferenceUtils.setShowSystemApps(_showSystemApps);
+    } catch (e) {
+      debugPrint('Error saving settings: $e');
+    }
   }
 
   /// Toggles dark/light theme.
@@ -116,13 +155,18 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
 
   /// Resets settings to default values.
   Future<void> _resetSettings() async {
-    await PreferenceUtils.resetSettings();
-    setState(() {
-      _themeMode = ThemeMode.light;
-      _showSystemApps = false;
-    });
-    Provider.of<ColorProvider>(context, listen: false).updatePrimaryColor(Colors.blue);
-    _saveSettings();
+    try {
+      await PreferenceUtils.resetSettings();
+      if (!mounted) return;
+      setState(() {
+        _themeMode = ThemeMode.light;
+        _showSystemApps = false;
+      });
+      Provider.of<ColorProvider>(context, listen: false).updatePrimaryColor(Colors.blue);
+      _saveSettings();
+    } catch (e) {
+      debugPrint('Error resetting settings: $e');
+    }
   }
 
   @override
@@ -133,25 +177,16 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
       title: 'ApkJoy',
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
-      // Light theme configuration using Material3.
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: primaryColor,
-          brightness: Brightness.light,
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: primaryColor, brightness: Brightness.light),
       ),
-      // Dark theme configuration.
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: primaryColor,
-          brightness: Brightness.dark,
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: primaryColor, brightness: Brightness.dark),
       ),
-      // Pass settings down to the AppListPage.
       home: AppListPage(
         onToggleTheme: _toggleTheme,
         currentThemeMode: _themeMode,
@@ -201,10 +236,15 @@ class _AppListPageState extends State<AppListPage> {
   }
 
   void _loadApps() {
-    _appsFuture = DeviceApps.getInstalledApplications(
-      includeAppIcons: true,
-      includeSystemApps: widget.showSystemApps,
-    );
+    try {
+      _appsFuture = DeviceApps.getInstalledApplications(
+        includeAppIcons: true,
+        includeSystemApps: widget.showSystemApps,
+      );
+    } catch (e) {
+      debugPrint('Error loading apps: $e');
+      _appsFuture = Future.value([]);
+    }
   }
 
   @override
@@ -249,9 +289,7 @@ class _AppListPageState extends State<AppListPage> {
               decoration: InputDecoration(
                 hintText: 'Search apps...',
                 prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(50),
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(50)),
               ),
             ),
           ),
@@ -266,26 +304,21 @@ class _AppListPageState extends State<AppListPage> {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
-          final apps = snapshot.data!;
-          final filteredApps = apps.where((app) {
-            return app.appName.toLowerCase().contains(_searchQuery.toLowerCase());
-          }).toList();
+          final apps = snapshot.data ?? [];
+          final filteredApps = apps.where((app) => app.appName.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
           return ListView.builder(
             itemCount: filteredApps.length,
             itemBuilder: (context, index) {
               final app = filteredApps[index];
               return ListTile(
-                leading: app is ApplicationWithIcon
-                    ? Image.memory(app.icon, width: 40, height: 40)
-                    : null,
+                leading: app is ApplicationWithIcon ? Image.memory(app.icon, width: 40, height: 40) : null,
                 title: Text(app.appName),
                 subtitle: Text(app.packageName),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => AppDetailPage(app: app),
-                    ),
+                    MaterialPageRoute(builder: (_) => AppDetailPage(app: app)),
                   );
                 },
               );
@@ -297,7 +330,7 @@ class _AppListPageState extends State<AppListPage> {
   }
 }
 
-/// Page to display details of a selected app and extract its APK.
+/// Page to display details of a selected app, extract its APK, and share it.
 class AppDetailPage extends StatefulWidget {
   final Application app;
   const AppDetailPage({super.key, required this.app});
@@ -309,18 +342,62 @@ class AppDetailPage extends StatefulWidget {
 class _AppDetailPageState extends State<AppDetailPage> {
   static const platform = MethodChannel('apkjoy');
   String _status = '';
+  String? _apkPath; // Store the extracted APK file path
 
   Future<void> extractApk() async {
+    String? directory;
+    try {
+      directory = await FilePicker.platform.getDirectoryPath();
+    } catch (e) {
+      setState(() {
+        _status = 'Error picking directory: $e';
+      });
+      return;
+    }
+    if (directory == null) {
+      setState(() {
+        _status = 'No directory selected.';
+      });
+      return;
+    }
+
+    final destination = '$directory/${widget.app.packageName}.apk';
     try {
       final String apkPath = await platform.invokeMethod('extractApk', {
         'packageName': widget.app.packageName,
+        'destination': destination,
       });
+      if (!mounted) return;
       setState(() {
+        _apkPath = apkPath;
         _status = 'APK extracted to:\n$apkPath';
       });
     } on PlatformException catch (e) {
+      if (!mounted) return;
       setState(() {
         _status = 'Error: ${e.message}';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _status = 'Unexpected error: $e';
+      });
+    }
+  }
+
+  Future<void> shareApk() async {
+    if (_apkPath == null) {
+      setState(() {
+        _status = 'No APK file available to share. Please extract it first.';
+      });
+      return;
+    }
+    try {
+      await Share.shareXFiles([XFile(_apkPath!)], text: 'Check out this APK!');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _status = 'Error sharing APK: $e';
       });
     }
   }
@@ -345,22 +422,17 @@ class _AppDetailPageState extends State<AppDetailPage> {
                   if (widget.app is ApplicationWithIcon)
                     CircleAvatar(
                       radius: 50,
-                      backgroundImage: MemoryImage(
-                        (widget.app as ApplicationWithIcon).icon,
-                      ),
+                      backgroundImage: MemoryImage((widget.app as ApplicationWithIcon).icon),
                       backgroundColor: Colors.transparent,
                     ),
                   const SizedBox(height: 20),
-                  Text(
+                  SelectableText(
                     widget.app.appName,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
-                  Text(
+                  SelectableText(
                     widget.app.packageName,
                     style: Theme.of(context).textTheme.titleSmall,
                     textAlign: TextAlign.center,
@@ -370,13 +442,22 @@ class _AppDetailPageState extends State<AppDetailPage> {
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
                       textStyle: const TextStyle(fontSize: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(50),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
                     ),
                     icon: const Icon(Icons.download),
                     label: const Text('Extract APK'),
                     onPressed: extractApk,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                      textStyle: const TextStyle(fontSize: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                    ),
+                    icon: const Icon(Icons.share),
+                    label: const Text('Share APK'),
+                    onPressed: _apkPath != null ? shareApk : null,
                   ),
                   const SizedBox(height: 24),
                   if (_status.isNotEmpty)
@@ -402,7 +483,7 @@ class _AppDetailPageState extends State<AppDetailPage> {
   }
 }
 
-/// Settings page for theme switching, system apps toggle, primary color selection, and resetting settings.
+
 class SettingsPage extends StatelessWidget {
   final bool isDark;
   final Function(bool) onToggleTheme;
@@ -458,16 +539,15 @@ class SettingsPage extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Card(
           elevation: 4,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                // Dark Theme Toggle (full area clickable)
                 ListTile(
                   leading: const Icon(Icons.brightness_6),
                   title: const Text("Dark Theme"),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   trailing: Switch(
                     value: isDark,
                     onChanged: onToggleTheme,
@@ -475,10 +555,10 @@ class SettingsPage extends StatelessWidget {
                   onTap: () => onToggleTheme(!isDark),
                 ),
                 const Divider(),
-                // Show System Apps Toggle (full area clickable)
                 ListTile(
                   leading: const Icon(Icons.apps),
                   title: const Text("Show System Apps"),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   trailing: Switch(
                     value: showSystemApps,
                     onChanged: onToggleSystemApps,
@@ -486,23 +566,23 @@ class SettingsPage extends StatelessWidget {
                   onTap: () => onToggleSystemApps(!showSystemApps),
                 ),
                 const Divider(),
-                // Change App Theme Color
                 ListTile(
                   leading: const Icon(Icons.palette),
                   title: const Text("Change App Theme Color"),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   trailing: CircleAvatar(
                     backgroundColor: colorProvider.primaryColor,
                   ),
                   onTap: () => colorProvider.showColorPicker(context),
                 ),
                 const Divider(),
-                // Reset Settings Button
                 ListTile(
                   leading: const Icon(Icons.restore),
                   title: const Text("Reset Settings"),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
                   onTap: () => _confirmReset(context),
                 ),
-              ],
+              ], 
             ),
           ),
         ),

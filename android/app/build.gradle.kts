@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.shihanrishad.apkjoy"
   //  compileSdk = flutter.compileSdkVersion
-    compileSdk = 34
+    compileSdk = 35
     // ndkVersion = flutter.ndkVersion
     ndkVersion = "27.2.12479018"
 
@@ -29,7 +29,7 @@ android {
      //   minSdk = flutter.minSdkVersion
         minSdk = 21
      //   targetSdk = flutter.targetSdkVersion
-        targetSdk = 34
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
