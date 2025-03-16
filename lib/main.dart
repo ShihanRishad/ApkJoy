@@ -7,7 +7,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'color_provider.dart';
 
-/// A simple utility to manage SharedPreferences.
 class PreferenceUtils {
   static late SharedPreferences _prefs;
 
@@ -74,7 +73,6 @@ void main() async {
   await PreferenceUtils.init();
   final SharedPreferences prefs = PreferenceUtils._prefs;
   runApp(
-    // Initialize ColorProvider with the saved primary color.
     ChangeNotifierProvider(
       create: (_) => ColorProvider(initialColor: Color(PreferenceUtils.getPrimaryColorValue())),
       child: ApkJoyApp(prefs: prefs),
@@ -82,7 +80,6 @@ void main() async {
   );
 }
 
-/// Root widget that holds global theme settings and the system apps toggle.
 class ApkJoyApp extends StatefulWidget {
   final SharedPreferences prefs;
   const ApkJoyApp({super.key, required this.prefs});
@@ -99,15 +96,14 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
   void initState() {
     super.initState();
     _loadSettings();
-    // Listen to changes in ColorProvider to immediately save any color updates.
+    // Listen to changes in ColorProvider to save any color updates.
     Provider.of<ColorProvider>(context, listen: false).addListener(() {
       final currentColor = Provider.of<ColorProvider>(context, listen: false).primaryColor;
       PreferenceUtils.setPrimaryColorValue(currentColor.value);
     });
   }
 
-  /// Loads settings from SharedPreferences after the first frame.
-  void _loadSettings() {
+  void _loadSettings() { // from shared prefs
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
         final themeString = widget.prefs.getString('themeMode');
@@ -119,7 +115,6 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
           _themeMode = themeString == 'dark' ? ThemeMode.dark : ThemeMode.light;
           _showSystemApps = showSystemApps;
         });
-        // Update ColorProvider with the loaded primary color.
         Provider.of<ColorProvider>(context, listen: false).updatePrimaryColor(Color(colorValue));
       } catch (e) {
         debugPrint('Error loading settings: $e');
@@ -127,8 +122,7 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
     });
   }
 
-  /// Saves current settings to SharedPreferences.
-  Future<void> _saveSettings() async {
+  Future<void> _saveSettings() async { 
     try {
       await PreferenceUtils.setThemeMode(_themeMode == ThemeMode.dark ? 'dark' : 'light');
       await PreferenceUtils.setShowSystemApps(_showSystemApps);
@@ -137,7 +131,6 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
     }
   }
 
-  /// Toggles dark/light theme.
   void _toggleTheme(bool isDark) {
     setState(() {
       _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
@@ -145,7 +138,6 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
     _saveSettings();
   }
 
-  /// Toggles whether system apps should be shown.
   void _toggleSystemApps(bool value) {
     setState(() {
       _showSystemApps = value;
@@ -153,7 +145,6 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
     _saveSettings();
   }
 
-  /// Resets settings to default values.
   Future<void> _resetSettings() async {
     try {
       await PreferenceUtils.resetSettings();
@@ -171,7 +162,6 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen to ColorProvider for changes.
     final primaryColor = Provider.of<ColorProvider>(context).primaryColor;
     return MaterialApp(
       title: 'ApkJoy',
@@ -198,7 +188,6 @@ class _ApkJoyAppState extends State<ApkJoyApp> {
   }
 }
 
-/// Page that displays the list of installed apps with search functionality.
 class AppListPage extends StatefulWidget {
   final Function(bool) onToggleTheme;
   final ThemeMode currentThemeMode;
@@ -344,46 +333,78 @@ class _AppDetailPageState extends State<AppDetailPage> {
   String _status = '';
   String? _apkPath; // Store the extracted APK file path
 
-  Future<void> extractApk() async {
-    String? directory;
-    try {
-      directory = await FilePicker.platform.getDirectoryPath();
-    } catch (e) {
-      setState(() {
-        _status = 'Error picking directory: $e';
-      });
-      return;
-    }
-    if (directory == null) {
-      setState(() {
-        _status = 'No directory selected.';
-      });
-      return;
-    }
-
-    final destination = '$directory/${widget.app.packageName}.apk';
-    try {
-      final String apkPath = await platform.invokeMethod('extractApk', {
-        'packageName': widget.app.packageName,
-        'destination': destination,
-      });
-      if (!mounted) return;
-      setState(() {
-        _apkPath = apkPath;
-        _status = 'APK extracted to:\n$apkPath';
-      });
-    } on PlatformException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _status = 'Error: ${e.message}';
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _status = 'Unexpected error: $e';
-      });
-    }
+Future<void> extractApk() async {
+  String? directory;
+  try {
+    directory = await FilePicker.platform.getDirectoryPath();
+  } catch (e) {
+    setState(() {
+      _status = 'Error picking directory: $e';
+    });
+    return;
   }
+  if (directory == null) {
+    setState(() {
+      _status = 'No directory selected.';
+    });
+    return;
+  }
+
+  // Show the progress dialog.
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => _buildProgressDialog(),
+  );
+
+  // Delay extraction a bit to allow the dialog to render.
+  await Future.delayed(const Duration(milliseconds: 100));
+
+  final destination = '$directory/${widget.app.packageName}.apk';
+  try {
+    final String apkPath = await platform.invokeMethod('extractApk', {
+      'packageName': widget.app.packageName,
+      'destination': destination,
+    });
+    if (!mounted) return;
+    setState(() {
+      _apkPath = apkPath;
+      _status = 'APK extracted to:\n$apkPath';
+    });
+  } on PlatformException catch (e) {
+    if (!mounted) return;
+    setState(() {
+      _status = 'Error: ${e.message}';
+    });
+  } catch (e) {
+    if (!mounted) return;
+    setState(() {
+      _status = 'Unexpected error: $e';
+    });
+  } finally {
+    // Dismiss the dialog after extraction is complete.
+    Navigator.of(context).pop();
+  }
+}
+
+Widget _buildProgressDialog() {
+  return AlertDialog(
+    content: Row(
+      children: [
+        const CircularProgressIndicator(),
+        const SizedBox(width: 20),
+        Expanded(
+          child: Text(
+            "Extracting...",
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
 
   Future<void> shareApk() async {
     if (_apkPath == null) {
