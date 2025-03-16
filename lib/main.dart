@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:device_apps/device_apps.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'color_provider.dart';
 
 class PreferenceUtils {
@@ -52,6 +54,26 @@ class PreferenceUtils {
     await setShowSystemApps(false);
     await setPrimaryColorValue(Colors.blue.value);
   }
+}
+
+Future<bool> requestStoragePermission() async {
+  // Check if running on Android
+  if (Platform.isAndroid) {
+    // Request regular storage permission first.
+    var status = await Permission.storage.status;
+    if (!status.isGranted) {
+      status = await Permission.storage.request();
+    }
+    // For Android 11+ (API 30) you might need MANAGE_EXTERNAL_STORAGE:
+    if (await Permission.manageExternalStorage.isDenied) {
+      await Permission.manageExternalStorage.request();
+    }
+    return status.isGranted &&
+        (await Permission.manageExternalStorage.status == PermissionStatus.granted ||
+            await Permission.manageExternalStorage.status == PermissionStatus.limited);
+  }
+  // For iOS or other platforms, adjust as necessary.
+  return true;
 }
 
 void main() async {
@@ -334,6 +356,15 @@ class _AppDetailPageState extends State<AppDetailPage> {
   String? _apkPath; // Store the extracted APK file path
 
 Future<void> extractApk() async {
+  // Request storage permissions before proceeding.
+  bool permissionGranted = await requestStoragePermission();
+  if (!permissionGranted) {
+    setState(() {
+      _status = 'Storage permission not granted.';
+    });
+    return;
+  }
+
   String? directory;
   try {
     directory = await FilePicker.platform.getDirectoryPath();
@@ -357,7 +388,7 @@ Future<void> extractApk() async {
     builder: (context) => _buildProgressDialog(),
   );
 
-  // Delay extraction a bit to allow the dialog to render.
+  // Delay extraction slightly to allow the dialog to render.
   await Future.delayed(const Duration(milliseconds: 100));
 
   final destination = '$directory/${widget.app.packageName}.apk';
@@ -382,7 +413,7 @@ Future<void> extractApk() async {
       _status = 'Unexpected error: $e';
     });
   } finally {
-    // Dismiss the dialog after extraction is complete.
+    // Dismiss the progress dialog.
     Navigator.of(context).pop();
   }
 }

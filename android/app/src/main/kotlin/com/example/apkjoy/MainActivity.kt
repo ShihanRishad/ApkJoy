@@ -15,6 +15,7 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 if (call.method == "extractApk") {
+                    // This will extract the apk on the call from /lib/main.dart
                     val packageName = call.argument<String>("packageName")
                     val destination = call.argument<String>("destination")
                     if (packageName == null || destination == null) {
@@ -29,7 +30,7 @@ class MainActivity : FlutterActivity() {
                         val destFile = File(destination)
                         destFile.parentFile?.mkdirs()
 
-                        // Copy the APK from its source to the destination.
+                        // Copy the APK from its source to the destination
                         FileInputStream(File(sourcePath)).use { input ->
                             FileOutputStream(destFile).use { output ->
                                 val buffer = ByteArray(1024)

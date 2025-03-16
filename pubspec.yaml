@@ -37,6 +37,7 @@ dependencies:
   shared_preferences: 2.5.2
   file_picker: 9.0.2
   share_plus: 10.1.4
+  permission_handler: ^11.4.0  # (or the latest version)
   # device_installed_apps: ^1.0.1
 
 
