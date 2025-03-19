@@ -12,42 +12,39 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
-            .setMethodCallHandler { call, result ->
-                if (call.method == "extractApk") {
-                    // This will extract the apk on the call from /lib/main.dart
-                    val packageName = call.argument<String>("packageName")
-                    val destination = call.argument<String>("destination")
-                    if (packageName == null || destination == null) {
-                        result.error("INVALID", "Missing packageName or destination", null)
-                        return@setMethodCallHandler
-                    }
-                    try {
-                        val packageManager = applicationContext.packageManager
-                        val appInfo = packageManager.getApplicationInfo(packageName, 0)
-                        val sourcePath = appInfo.sourceDir
-
-                        val destFile = File(destination)
-                        destFile.parentFile?.mkdirs()
-
-                        // Copy the APK from its source to the destination
-                        FileInputStream(File(sourcePath)).use { input ->
-                            FileOutputStream(destFile).use { output ->
-                                val buffer = ByteArray(1024)
-                                var bytesRead: Int
-                                while (input.read(buffer).also { bytesRead = it } != -1) {
-                                    output.write(buffer, 0, bytesRead)
-                                }
-                                output.flush()
-                            }
-                        }
-                        result.success(destination)
-                    } catch (e: Exception) {
-                        result.error("ERROR", e.localizedMessage, null)
-                    }
-                } else {
-                    result.notImplemented()
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method == "extractApk") {
+                val packageName = call.argument<String>("packageName")
+                if (packageName == null) {
+                    result.error("ERROR", "Package name is null", null)
+                    return@setMethodCallHandler
                 }
+                try {
+                    val packageManager = applicationContext.packageManager
+                    val appInfo = packageManager.getApplicationInfo(packageName, 0)
+                    val sourcePath = appInfo.sourceDir
+                    val outputDir = File(applicationContext.filesDir, "ExtractedAPKs") // Use internal storage
+                    if (!outputDir.exists()) {
+                        outputDir.mkdirs()
+                    }
+                    val outputFile = File(outputDir, "$packageName.apk")
+                    FileInputStream(File(sourcePath)).use { input ->
+                        FileOutputStream(outputFile).use { output ->
+                            val buffer = ByteArray(4 * 1024)
+                            var byteCount: Int
+                            while (input.read(buffer).also { byteCount = it } > 0) {
+                                output.write(buffer, 0, byteCount)
+                            }
+                            output.flush()
+                        }
+                    }
+                    result.success(outputFile.absolutePath)
+                } catch (e: Exception) {
+                    result.error("ERROR", e.localizedMessage, null)
+                }
+            } else {
+                result.notImplemented()
             }
+        }
     }
 }
