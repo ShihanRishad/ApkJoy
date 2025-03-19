@@ -23,7 +23,7 @@ class MainActivity : FlutterActivity() {
                     val packageManager = applicationContext.packageManager
                     val appInfo = packageManager.getApplicationInfo(packageName, 0)
                     val sourcePath = appInfo.sourceDir
-                    val outputDir = File(applicationContext.filesDir, "ExtractedAPKs") // Use internal storage
+                    val outputDir = File(applicationContext.getExternalFilesDir(null), "ExtractedAPKs")
                     if (!outputDir.exists()) {
                         outputDir.mkdirs()
                     }
