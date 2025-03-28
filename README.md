@@ -1,6 +1,6 @@
 <h1 align="center"> Apkjoy - Extract, Save & Share APKs Instantly 🚀 </h1>
 <p align="center">
-<strong>Your APK extraction tool!</strong>
+<strong>Your friend for apps on you pone.</strong>
 </p>
 <img src="assets/images/banner.png" alt="banner">
 
