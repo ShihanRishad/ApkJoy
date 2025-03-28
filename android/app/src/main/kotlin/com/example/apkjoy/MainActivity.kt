@@ -1,4 +1,4 @@
-package com.example.apkjoy
+package com.shihanrishad.apkjoy
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -8,7 +8,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "apk_extractor"
+    private val CHANNEL = "apkjoy"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -16,28 +16,24 @@ class MainActivity : FlutterActivity() {
             if (call.method == "extractApk") {
                 val packageName = call.argument<String>("packageName")
                 if (packageName == null) {
-                    result.error("INVALID", "Package name is null", null)
+                    result.error("ERROR", "Package name is null", null)
                     return@setMethodCallHandler
                 }
                 try {
                     val packageManager = applicationContext.packageManager
                     val appInfo = packageManager.getApplicationInfo(packageName, 0)
                     val sourcePath = appInfo.sourceDir
-
-                    // Output directory in the app's external files directory.
-                    val outputDir = File(getExternalFilesDir(null), "ExtractedAPKs")
+                    val outputDir = File(applicationContext.getExternalFilesDir(null), "ExtractedAPKs")
                     if (!outputDir.exists()) {
                         outputDir.mkdirs()
                     }
                     val outputFile = File(outputDir, "$packageName.apk")
-
-                    // Copy the APK from its source to the output file.
                     FileInputStream(File(sourcePath)).use { input ->
                         FileOutputStream(outputFile).use { output ->
-                            val buffer = ByteArray(1024)
-                            var bytesRead: Int
-                            while (input.read(buffer).also { bytesRead = it } != -1) {
-                                output.write(buffer, 0, bytesRead)
+                            val buffer = ByteArray(4 * 1024)
+                            var byteCount: Int
+                            while (input.read(buffer).also { byteCount = it } > 0) {
+                                output.write(buffer, 0, byteCount)
                             }
                             output.flush()
                         }
