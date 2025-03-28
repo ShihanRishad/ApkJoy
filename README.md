@@ -1,6 +1,10 @@
-# Apkjoy - Extract, Save & Share APKs Instantly 🚀
+<h1 align="center"> Apkjoy - Extract, Save & Share APKs Instantly 🚀 </h1>
+<p align="center">
+<strong>Your APK extraction tool!</strong>
+</p>
+<img src="assets/images/banner.png" alt="banner">
 
-**The your APK extraction tool!** Extract, save, and share your installed apps with just one tap. Designed for speed, security, and simplicity, Apkjoy is your go-to solution for managing APK files like a pro.
+<br>Extract, save, and share your installed apps with just one tap. Designed for speed, security, and simplicity, Apkjoy is your go-to solution for managing APK files like a pro.
 
 ## Features
 
@@ -9,26 +13,28 @@
 🔘 **Lightweight & Efficient** – No unnecessary bloat, runs smoothly.  
 🔘 **Secure & Private** – No hidden trackers or unnecessary permissions.  
 🔘 **Modern UI** – Simple, sleek, and intuitive.  
-🔘arrow **Completely Free** – No ads, no subscriptions, just APK extraction.  
+🔘 **Completely Free** – No ads, no subscriptions, just APK extraction.  
 
 
 ## Installation
 
-1. **Download Apkjoy from the Releases section** or use the direct link: [Download Apkjoy](https://your-download-link.com)  
+1. **Download Apkjoy from the Releases section** or directly from the link below:
 2. Install it on your device.  
 3. Start extracting APKs instantly!  
-
+<h4>
+Direct download: <a href="https://github.com/ShihanRishad/ApkJoy/releases/tag/v1.0.0">https://github.com/ShihanRishad/ApkJoy/releases/tag/v1.0.0</a>
+</h4>
 
 ## Screenshots
 
-<table>
+<table align="center">
 <tr>
 <th>Home</th><th>Detail</th><th>Settings</th>
 </tr>
 <tr>
-<td>Screenshot</td>
-<td>Screenshot</td>
-<td>Screenshot</td>
+<td><img src="assets/images/screenshot_list.png" alt="home page"/></td>
+<td><img src="assets/images/screenshot_detail2.png" alt="detail page"/></td>
+<td><img src="assets/images/screenshot_settings.png" alt="settings page"/></td>
 </tr>
 </table>
 
