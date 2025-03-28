@@ -1,7 +1,7 @@
-<h1 align="center"> Apkjoy - Extract, Save & Share APKs Instantly 🚀 </h1>
-<p align="center">
-<strong>Your friend for apps on you pone.</strong>
-</p>
+<h1 align="center"> ✨ Apkjoy ✨ </h1>
+<h3 align="center">
+<strong>Your friend for apps on you phone 🚀</strong>
+</h3>
 <img src="assets/images/banner.png" alt="banner">
 
 <br>Extract, save, and share your installed apps with just one tap. Designed for speed, security, and simplicity, Apkjoy is your go-to solution for managing APK files like a pro.
