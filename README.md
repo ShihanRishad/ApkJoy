@@ -8,12 +8,18 @@
 
 ## Features
 
-🔘 **Simple Extraction** – Extract APKs instantly from installed apps, on one tap  
-🔘 **Save to External Storage** – APKs are stored in `Android/data/com.your.package.name`.  
-🔘 **Lightweight & Efficient** – No unnecessary bloat, runs smoothly.  
+🔘 **Simple Extraction** – Extract APKs instantly from installed apps, on one tap.
+
+🔘 **Save to External Storage** – APKs are stored in `Android/data/com.your.package.name`.
+
+🔘 **Lightweight & Efficient** – No unnecessary bloat, runs smoothly.
+
 🔘 **Secure & Private** – No hidden trackers or unnecessary permissions.  
+
 🔘 **Modern UI** – Simple, sleek, and intuitive.  
-🔘 **Completely Free** – No ads, no subscriptions, just APK extraction.  
+
+🔘 **Completely Free** – No ads, no subscriptions, just APK extraction. 
+
 
 
 ## Installation
@@ -73,7 +79,9 @@ Direct download: <a href="https://github.com/ShihanRishad/ApkJoy/releases/tag/v1
 ## Why Choose Apkjoy?
 
 🔹 **Fast & Lightweight** – Minimal footprint, maximum efficiency.  
+
 🔹 **No Ads, No Subscriptions** – 100% free forever.  
+
 🔹 **User-Friendly** – Simple interface, no complex steps.  
 
 
