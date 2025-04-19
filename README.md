@@ -2,7 +2,9 @@
 <h3 align="center">
 <strong>Your friend for apps on you phone 🚀</strong>
 </h3>
+<a href="https://apkjoy.vercel.app/">
 <img src="assets/images/banner.png" alt="banner">
+</a>
 
 <br>Extract, save, and share your installed apps with just one tap. Designed for speed, security, and simplicity, Apkjoy is your go-to solution for managing APK files like a pro.
 
@@ -23,13 +25,20 @@
 
 
 ## Installation
-
+Visit <a href="https://apkjoy.vercel.app/">https://apkjoy.vercel.app/</a> to download there. Or, you can:
 1. **Download Apkjoy from the Releases section** or directly from the link below:
 2. Install it on your device.  
 3. Start extracting APKs instantly!  
 <h4>
 Direct download: <a href="https://github.com/ShihanRishad/ApkJoy/releases/tag/v1.0.0">https://github.com/ShihanRishad/ApkJoy/releases/tag/v1.0.0</a>
 </h4>
+
+## Visit
+Visit the landing for ApkJoy:
+<a href="https://apkjoy.vercel.app/">https://apkjoy.vercel.app/</a>
+
+Support the GitHub repo for landing:
+<a href="https://www.github.com/ShihanRishad/ApkJoy-web/">https://github.com/ShihanRishad/Apkjoy-web</a>
 
 ## Screenshots
 
