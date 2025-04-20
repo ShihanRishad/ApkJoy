@@ -661,7 +661,7 @@ class SettingsPage extends StatelessWidget {
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.info_outline),
-                  title: const Text("About APKJoy"),
+                  title: const Text("About ApkJoy"),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
