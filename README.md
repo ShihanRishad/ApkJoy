@@ -37,7 +37,7 @@ Direct download: <a href="https://github.com/ShihanRishad/ApkJoy/releases/tag/v1
 Visit the landing for ApkJoy:
 <a href="https://apkjoy.vercel.app/">https://apkjoy.vercel.app/</a>
 
-Support the GitHub repo for landing:
+Contribute the GitHub repo for landing:
 <a href="https://www.github.com/ShihanRishad/ApkJoy-web/">https://github.com/ShihanRishad/Apkjoy-web</a>
 
 ## Screenshots
